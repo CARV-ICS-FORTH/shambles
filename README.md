@@ -13,3 +13,12 @@ Patched jemalloc library that uses the page fault based sampling. The extra func
 # plugins
 
 Plugins for the patched jemalloc. Can be used for various goals, including profiling and migrations.
+
+# FUNDING
+
+We thankfully acknowledge the support of the European Commission and the
+Greek General Secretariat for Research and Innovation under the EuroHPC
+Programme through the DEEP-SEA project (GA 955606). National
+contributions from the involved state members (including the Greek
+General Secretariat for Research and Innovation) match the EuroHPC
+funding.
