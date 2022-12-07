@@ -1,0 +1,65 @@
+diff -u b/src/tracer/sampling/intel-pebs/sampling-intel-pebs.c b/src/tracer/sampling/intel-pebs/sampling-intel-pebs.c
+--- b/src/tracer/sampling/intel-pebs/sampling-intel-pebs.c
++++ b/src/tracer/sampling/intel-pebs/sampling-intel-pebs.c
+@@ -85,7 +85,8 @@
+ int perf_event_open(struct perf_event_attr *hw_event_uptr, pid_t pid, int cpu,
+ 	int group_fd, unsigned long flags)
+ {
+-	return syscall (__NR_perf_event_open,hw_event_uptr, pid, cpu, group_fd, flags);
++	int fd;
++	fd = syscall (__NR_perf_event_open,hw_event_uptr, pid, cpu, group_fd, flags);
+ }
+ 
+ #if defined(__x86_64)
+@@ -130,6 +131,7 @@
+ #define PROCESSOR_HASWELL_EP		29
+ #define PROCESSOR_KNIGHTS_LANDING       30
+ #define PROCESSOR_SKYLAKE		31 // also CASCADELAKE
++#define PROCESSOR_ICELAKE               32
+ 
+ 
+ static int detect_processor_cpuinfo(void)
+@@ -257,6 +259,9 @@
+ 				case 87:
+ 					processor_type=PROCESSOR_KNIGHTS_LANDING;
+ 					break;
++				case 106:
++					processor_type=PROCESSOR_ICELAKE;
++                                        break;
+ 				default:
+ 					processor_type=PROCESSOR_UNKNOWN;
+ 					break;
+@@ -304,6 +309,7 @@
+ 		case PROCESSOR_HASWELL_EP:
+ 		case PROCESSOR_BROADWELL:
+ 		case PROCESSOR_SKYLAKE:
++		case PROCESSOR_ICELAKE:
+ 			*config=0x1cd; // MEM_TRANS_RETIRED.LOAD_LATENCY
+ 			break;
+ 		case PROCESSOR_KNIGHTS_LANDING:
+@@ -335,6 +341,7 @@
+ 			*config=0x82d0; // MEM_UOPS_RETIRED.ALL_STORES
+ 			break;
+ 		case PROCESSOR_SKYLAKE:
++		case PROCESSOR_ICELAKE:
+ 			*config=0x82d0; // MEM_INST_RETIRED.ALL_STORES
+ 			break;
+ 	        case PROCESSOR_KNIGHTS_LANDING:
+@@ -353,6 +360,7 @@
+ 	switch (detect_processor())
+ 	{
+ 		case PROCESSOR_SKYLAKE:
++		case PROCESSOR_ICELAKE:
+ 			*config= 0x20d1; // MEM_LOAD_RETIRED.L3_MISS
+ 			break;
+ 		default:
+@@ -372,6 +380,9 @@
+ 		case PROCESSOR_SKYLAKE:
+ 			*config = 0x3fbc000002; // OFFCORE_RESPONSE.DEMAND_RFO.L3_MISS.ANY_SNOOP
+ 			break;
++		case PROCESSOR_ICELAKE:
++			*config = 0x3f3fc00002;
++			break;
+ 		default:
+ 			*config = 0x0;
+ 			processor_notfound = -1;

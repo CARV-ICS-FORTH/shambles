@@ -1,0 +1,19 @@
+name = 'SHAMBLES'
+version = '0.1'
+homepage = 'https://github.com/CARV-ICS-FORTH/shambles'
+description = "Initial test for easybuild SHMABLES"
+toolchain = SYSTEM
+
+source_urls = [
+	'https://github.com/CARV-ICS-FORTH/shambles/archive/refs/heads/'
+]
+
+sources = ['master.tar.gz']
+easyblock = 'ConfigureMake'
+preconfigopts = 'cd jemalloc && ./autogen.sh && '
+prebuildopts = 'cd jemalloc && '
+moduleclass = 'lib'
+preinstallopts = 'cd jemalloc && '
+modextrapaths = {'LD_PRELOAD': ['lib/libjemalloc.so']}
+
+modloadmsg = 'Make sure your kernel has CONFIG_PGFAULT_SAMPLE_PROFILER enabled, or SHAMBLES will missbehave'
