@@ -12,7 +12,7 @@ Patched jemalloc library that uses the page fault based sampling. The extra func
 
 # plugins
 
-Plugins for the patched jemalloc. Can be used for various goals, including profiling and migrations. For profiling only plugins, no special type of memory is rqquired. For migrations, the target machin should support heterogeneous memory (tested with DDR and Optane NVDIMM).
+Plugins for the patched jemalloc. Can be used for various goals, including profiling and migrations. For profiling only plugins, no special type of memory is required. For migrations, the target machine should support heterogeneous memory (tested with DDR and Optane NVDIMM).
 
 # FUNDING
 
