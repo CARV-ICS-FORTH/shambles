@@ -1,3 +1,3 @@
 # Kikoku
 
-Microbenchmark for memry access cost estimation
+Microbenchmark for memory access cost estimation
