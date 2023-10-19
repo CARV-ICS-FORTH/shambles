@@ -1,6 +1,6 @@
 diff -ruN linux/arch/x86/include/asm/kroom.h linux-v1/arch/x86/include/asm/kroom.h
 --- linux/arch/x86/include/asm/kroom.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux-v1/arch/x86/include/asm/kroom.h	2023-10-10 16:01:15.742230960 +0300
++++ linux-v1/arch/x86/include/asm/kroom.h	2023-10-17 13:21:00.265486356 +0300
 @@ -0,0 +1,12 @@
 +#ifndef _ASM_X86_KROOM_H
 +#ifdef CONFIG_KROOM
@@ -16,7 +16,7 @@ diff -ruN linux/arch/x86/include/asm/kroom.h linux-v1/arch/x86/include/asm/kroom
 +#endif /* _ASM_X86_KROOM_H */
 diff -ruN linux/arch/x86/include/asm/page_64_types.h linux-v1/arch/x86/include/asm/page_64_types.h
 --- linux/arch/x86/include/asm/page_64_types.h	2022-03-23 17:39:00.242183791 +0200
-+++ linux-v1/arch/x86/include/asm/page_64_types.h	2023-02-08 13:23:39.824091737 +0200
++++ linux-v1/arch/x86/include/asm/page_64_types.h	2023-10-17 12:07:56.303269836 +0300
 @@ -94,8 +94,15 @@
  #define TASK_SIZE_OF(child)	((test_tsk_thread_flag(child, TIF_ADDR32)) ? \
  					IA32_PAGE_OFFSET : TASK_SIZE_MAX)
@@ -35,7 +35,7 @@ diff -ruN linux/arch/x86/include/asm/page_64_types.h linux-v1/arch/x86/include/a
   * In spite of the name, KERNEL_IMAGE_SIZE is a limit on the maximum virtual
 diff -ruN linux/arch/x86/include/asm/pgtable.h linux-v1/arch/x86/include/asm/pgtable.h
 --- linux/arch/x86/include/asm/pgtable.h	2022-03-23 17:39:00.242183791 +0200
-+++ linux-v1/arch/x86/include/asm/pgtable.h	2023-10-13 14:54:30.828727024 +0300
++++ linux-v1/arch/x86/include/asm/pgtable.h	2023-10-17 12:07:56.303269836 +0300
 @@ -903,6 +903,13 @@
  
  static inline int p4d_present(p4d_t p4d)
@@ -81,7 +81,7 @@ diff -ruN linux/arch/x86/include/asm/pgtable.h linux-v1/arch/x86/include/asm/pgt
  static inline unsigned long p4d_index(unsigned long address)
 diff -ruN linux/arch/x86/include/uapi/asm/mman.h linux-v1/arch/x86/include/uapi/asm/mman.h
 --- linux/arch/x86/include/uapi/asm/mman.h	2022-03-23 17:39:00.252183833 +0200
-+++ linux-v1/arch/x86/include/uapi/asm/mman.h	2022-03-23 18:19:41.523206450 +0200
++++ linux-v1/arch/x86/include/uapi/asm/mman.h	2023-10-17 12:07:56.303269836 +0300
 @@ -4,6 +4,8 @@
  
  #define MAP_32BIT	0x40		/* only give out 32bit addresses */
@@ -93,7 +93,7 @@ diff -ruN linux/arch/x86/include/uapi/asm/mman.h linux-v1/arch/x86/include/uapi/
   * Take the 4 protection key bits out of the vma->vm_flags
 diff -ruN linux/arch/x86/Kconfig linux-v1/arch/x86/Kconfig
 --- linux/arch/x86/Kconfig	2022-03-23 17:39:00.232183750 +0200
-+++ linux-v1/arch/x86/Kconfig	2023-02-08 13:20:28.003221045 +0200
++++ linux-v1/arch/x86/Kconfig	2023-10-17 12:07:56.303269836 +0300
 @@ -1851,6 +1851,17 @@
  
  	  If unsure, say y.
@@ -114,7 +114,7 @@ diff -ruN linux/arch/x86/Kconfig linux-v1/arch/x86/Kconfig
  	depends on CPU_SUP_INTEL
 diff -ruN linux/arch/x86/kernel/sys_x86_64.c linux-v1/arch/x86/kernel/sys_x86_64.c
 --- linux/arch/x86/kernel/sys_x86_64.c	2022-03-23 17:39:00.262183874 +0200
-+++ linux-v1/arch/x86/kernel/sys_x86_64.c	2023-10-13 16:45:53.473428799 +0300
++++ linux-v1/arch/x86/kernel/sys_x86_64.c	2023-10-18 17:28:48.815355216 +0300
 @@ -114,6 +114,22 @@
  		}
  		return;
@@ -178,34 +178,25 @@ diff -ruN linux/arch/x86/kernel/sys_x86_64.c linux-v1/arch/x86/kernel/sys_x86_64
  		if (!mmap_address_hint_valid(addr, len))
  			goto get_unmapped_area;
  
-@@ -209,8 +251,22 @@
- 	if (addr > DEFAULT_MAP_WINDOW && !in_32bit_syscall())
- 		info.high_limit += TASK_SIZE_MAX - DEFAULT_MAP_WINDOW;
+@@ -211,6 +253,15 @@
  
--	info.align_mask = 0;
--	info.align_offset = pgoff << PAGE_SHIFT;
+ 	info.align_mask = 0;
+ 	info.align_offset = pgoff << PAGE_SHIFT;
 +	#ifdef CONFIG_KROOM
-+        if(flags & MAP_SAMPLED) {
-+                info.low_limit = __VIRTUAL_SAMPLED_MIN;
-+                info.high_limit = task_size_64bit(1);
-+        }else{
-+                info.low_limit = PAGE_SIZE;
-+                info.high_limit = get_mmap_base(0);
-+                if(info.high_limit > __VIRTUAL_UNSAMPLED_MAX){
-+                        info.high_limit = __VIRTUAL_UNSAMPLED_MAX;
-+                }
-+        }
-+        #else
-+        info.low_limit = PAGE_SIZE;
-+        info.high_limit = get_mmap_base(0);
-+        #endif /* CONFIG_KROOM */
++	if(flags & MAP_SAMPLED) {
++		info.low_limit = __VIRTUAL_SAMPLED_MIN;
++		info.high_limit = task_size_64bit(1);
++	}else if(info.high_limit > __VIRTUAL_UNSAMPLED_MAX){
++		info.high_limit = __VIRTUAL_UNSAMPLED_MAX;
++	}
++	#endif /* CONFIG_KROOM */
 +
  	if (filp) {
  		info.align_mask = get_align_mask();
  		info.align_offset += get_align_bits();
 diff -ruN linux/arch/x86/mm/kroom.c linux-v1/arch/x86/mm/kroom.c
 --- linux/arch/x86/mm/kroom.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux-v1/arch/x86/mm/kroom.c	2023-10-17 10:30:54.387195827 +0300
++++ linux-v1/arch/x86/mm/kroom.c	2023-10-17 12:07:56.303269836 +0300
 @@ -0,0 +1,46 @@
 +#include <asm/kroom.h>
 +#include <asm/tlbflush.h>
@@ -255,7 +246,7 @@ diff -ruN linux/arch/x86/mm/kroom.c linux-v1/arch/x86/mm/kroom.c
 +}
 diff -ruN linux/arch/x86/mm/Makefile linux-v1/arch/x86/mm/Makefile
 --- linux/arch/x86/mm/Makefile	2022-03-23 17:39:00.272183916 +0200
-+++ linux-v1/arch/x86/mm/Makefile	2023-10-11 10:11:44.353822519 +0300
++++ linux-v1/arch/x86/mm/Makefile	2023-10-17 12:07:56.303269836 +0300
 @@ -55,3 +55,5 @@
  obj-$(CONFIG_AMD_MEM_ENCRYPT)	+= mem_encrypt.o
  obj-$(CONFIG_AMD_MEM_ENCRYPT)	+= mem_encrypt_identity.o
@@ -264,7 +255,7 @@ diff -ruN linux/arch/x86/mm/Makefile linux-v1/arch/x86/mm/Makefile
 +obj-$(CONFIG_KROOM)	+= kroom.o
 diff -ruN linux/include/linux/kroom.h linux-v1/include/linux/kroom.h
 --- linux/include/linux/kroom.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux-v1/include/linux/kroom.h	2023-10-13 13:37:35.108187023 +0300
++++ linux-v1/include/linux/kroom.h	2023-10-17 12:07:56.303269836 +0300
 @@ -0,0 +1,12 @@
 +#ifndef _LINUX_KROOM_H
 +#ifdef CONFIG_KROOM
@@ -280,7 +271,7 @@ diff -ruN linux/include/linux/kroom.h linux-v1/include/linux/kroom.h
 +#endif /* _LINUX_KROOM_H */
 diff -ruN linux/include/linux/mm_types.h linux-v1/include/linux/mm_types.h
 --- linux/include/linux/mm_types.h	2022-03-23 17:39:02.522193183 +0200
-+++ linux-v1/include/linux/mm_types.h	2023-10-13 13:54:15.906320828 +0300
++++ linux-v1/include/linux/mm_types.h	2023-10-17 12:07:56.303269836 +0300
 @@ -16,6 +16,9 @@
  #include <linux/workqueue.h>
  #include <linux/seqlock.h>
@@ -304,14 +295,15 @@ diff -ruN linux/include/linux/mm_types.h linux-v1/include/linux/mm_types.h
  	 * is dynamically sized based on nr_cpu_ids.
 diff -ruN linux/mm/kroom.c linux-v1/mm/kroom.c
 --- linux/mm/kroom.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux-v1/mm/kroom.c	2023-10-13 16:41:54.601757637 +0300
-@@ -0,0 +1,165 @@
++++ linux-v1/mm/kroom.c	2023-10-17 12:10:47.584587784 +0300
+@@ -0,0 +1,166 @@
 +#include <asm/kroom.h>
 +#include <linux/kroom.h>
 +#include <linux/hrtimer.h>
 +
 +#include <linux/debugfs.h>
 +#include <linux/fs.h>
++#include <linux/mmap_lock.h>
 +
 +#define TIMER_SEC 0
 +#define TIMER_NSEC 100000
@@ -473,7 +465,7 @@ diff -ruN linux/mm/kroom.c linux-v1/mm/kroom.c
 +subsys_initcall(kroom_init);
 diff -ruN linux/mm/Makefile linux-v1/mm/Makefile
 --- linux/mm/Makefile	2022-03-23 17:39:02.742194089 +0200
-+++ linux-v1/mm/Makefile	2023-10-11 11:10:28.669236223 +0300
++++ linux-v1/mm/Makefile	2023-10-17 12:07:56.303269836 +0300
 @@ -66,6 +66,7 @@
  	obj-$(CONFIG_ADVISE_SYSCALLS)	+= madvise.o
  endif
@@ -484,7 +476,7 @@ diff -ruN linux/mm/Makefile linux-v1/mm/Makefile
  obj-$(CONFIG_ZSWAP)	+= zswap.o
 diff -ruN linux/mm/memory.c linux-v1/mm/memory.c
 --- linux/mm/memory.c	2022-03-23 17:39:02.752194130 +0200
-+++ linux-v1/mm/memory.c	2023-10-13 13:23:03.281856837 +0300
++++ linux-v1/mm/memory.c	2023-10-17 12:07:56.303269836 +0300
 @@ -83,6 +83,11 @@
  #include <asm/tlb.h>
  #include <asm/tlbflush.h>
@@ -518,7 +510,7 @@ diff -ruN linux/mm/memory.c linux-v1/mm/memory.c
  		ret = create_huge_pud(&vmf);
 diff -ruN linux/mm/mmap.c linux-v1/mm/mmap.c
 --- linux/mm/mmap.c	2022-03-23 17:39:02.752194130 +0200
-+++ linux-v1/mm/mmap.c	2023-10-13 16:42:23.501956569 +0300
++++ linux-v1/mm/mmap.c	2023-10-17 12:07:56.303269836 +0300
 @@ -73,6 +73,10 @@
  int mmap_rnd_compat_bits __read_mostly = CONFIG_ARCH_MMAP_RND_COMPAT_BITS;
  #endif
@@ -545,7 +537,7 @@ diff -ruN linux/mm/mmap.c linux-v1/mm/mmap.c
  		unsigned long flags_mask;
 diff -ruN linux/mm/pgtable-generic.c linux-v1/mm/pgtable-generic.c
 --- linux/mm/pgtable-generic.c	2022-03-23 17:39:02.752194130 +0200
-+++ linux-v1/mm/pgtable-generic.c	2022-03-23 17:42:33.813063427 +0200
++++ linux-v1/mm/pgtable-generic.c	2023-10-17 12:07:56.303269836 +0300
 @@ -27,6 +27,7 @@
  #ifndef __PAGETABLE_P4D_FOLDED
  void p4d_clear_bad(p4d_t *p4d)
