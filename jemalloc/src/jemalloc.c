@@ -213,6 +213,11 @@ static pthread_t		malloc_initializer = NO_INITIALIZER;
 static bool			malloc_initializer = NO_INITIALIZER;
 #endif
 
+size_t sizeThresshold;
+#define SHAMBLES_ALIGNMENT_SHIFT 12
+#define SHAMBLES_ALIGNMENT (1 << SHAMBLES_ALIGNMENT_SHIFT)
+#define SHAMBLES_REALIGN(align) ((align != 0)?(align << MAX(SHAMBLES_ALIGNMENT_SHIFT - __builtin_ctzl(align), 0)):SHAMBLES_ALIGNMENT)
+
 /* Used to avoid initialization races. */
 #ifdef _WIN32
 #if _WIN32_WINNT >= 0x0600
@@ -1761,6 +1766,18 @@ malloc_conf_init(sc_data_t *sc_data, unsigned bin_shard_sizes[SC_NBINS]) {
 			malloc_abort_invalid_conf();
 		}
 	}
+	/* Get shambles thresshold */
+	{
+		char *env;
+		if((env = getenv("SHMBLES_SIZE_THRESHOLD"))==NULL){
+			sizeThresshold = 0x10000;
+		}else{
+			sizeThresshold = strtol(env, NULL, 0);
+			if(!sizeThresshold){
+				sizeThresshold = 0x10000;
+			}
+		}
+	}
 }
 
 #undef MALLOC_CONF_NSOURCES
@@ -2723,6 +2740,11 @@ malloc_default(size_t size) {
 	dopts.result = &ret;
 	dopts.num_items = 1;
 	dopts.item_size = size;
+	if(size >= sizeThresshold){
+		//sopts.bump_empty_aligned_alloc = true;
+		//sopts.min_alignment = sizeof(void *);
+		dopts.alignment = SHAMBLES_ALIGNMENT;
+	}
 
 	imalloc(&sopts, &dopts);
 	/*
@@ -2780,7 +2802,11 @@ void JEMALLOC_NOTHROW *
 JEMALLOC_ATTR(malloc) JEMALLOC_ALLOC_SIZE(1)
 je_malloc(size_t size) {
 	void *ptr;
-	ptr = imalloc_fastpath(size, &malloc_default);
+	if(size >= sizeThresshold){
+		ptr = malloc_default(size);
+	}else{
+		ptr = imalloc_fastpath(size, &malloc_default);
+	}
 	logAlloc(ALLOC_EVENT_ALLOC, NULL, ptr, size);
 	return ptr;
 }
@@ -2807,7 +2833,11 @@ je_posix_memalign(void **memptr, size_t alignment, size_t size) {
 	dopts.result = memptr;
 	dopts.num_items = 1;
 	dopts.item_size = size;
-	dopts.alignment = alignment;
+	if(size >= sizeThresshold){
+		dopts.alignment = SHAMBLES_REALIGN(alignment);
+	}else{
+		dopts.alignment = alignment;
+	}
 
 	ret = imalloc(&sopts, &dopts);
 	if (sopts.slow) {
@@ -2850,7 +2880,11 @@ je_aligned_alloc(size_t alignment, size_t size) {
 	dopts.result = &ret;
 	dopts.num_items = 1;
 	dopts.item_size = size;
-	dopts.alignment = alignment;
+	if(size >= sizeThresshold){
+		dopts.alignment = SHAMBLES_REALIGN(alignment);
+	}else{
+		dopts.alignment = alignment;
+	}
 
 	imalloc(&sopts, &dopts);
 	if (sopts.slow) {
@@ -2886,6 +2920,9 @@ je_calloc(size_t num, size_t size) {
 	dopts.num_items = num;
 	dopts.item_size = size;
 	dopts.zero = true;
+	if(size >= sizeThresshold){
+		dopts.alignment = SHAMBLES_ALIGNMENT;
+	}
 
 	imalloc(&sopts, &dopts);
 	if (sopts.slow) {
@@ -3734,6 +3771,9 @@ je_realloc(void *ptr, size_t size) {
 		dopts.result = &ret;
 		dopts.num_items = 1;
 		dopts.item_size = size;
+		if(size >= sizeThresshold){
+			dopts.alignment = SHAMBLES_ALIGNMENT;
+		}
 
 		imalloc(&sopts, &dopts);
 		if (sopts.slow) {
