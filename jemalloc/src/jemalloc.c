@@ -3233,11 +3233,11 @@ JEMALLOC_EXPORT void JEMALLOC_NOTHROW
 je_free(void *ptr) {
 	LOG("core.free.entry", "ptr: %p", ptr);
 
-	if (!free_fastpath(ptr, 0, false)) {
-		free_default(ptr);
-	}
 	if(ptr != NULL){
 		logAlloc(ALLOC_EVENT_FREE, ptr, NULL, 0);
+	}
+	if (!free_fastpath(ptr, 0, false)) {
+		free_default(ptr);
 	}
 	LOG("core.free.exit", "");
 }
