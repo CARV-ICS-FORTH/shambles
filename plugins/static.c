@@ -28,7 +28,7 @@ void shambles_init(void (**reportAllocFunc)(AllocEventType, void *, void *, size
 	if(ShamblesPluginConfigInit(&config)){
 		abort();
 	}
-	if((env = getenv("SHMBLES_SLOW_BITMASK"))==NULL){
+	if((env = getenv("SHAMBLES_SLOW_BITMASK"))==NULL){
 		bitmap = 0;
 	}else{
 		bitmap = strtol(env, NULL, 0);
