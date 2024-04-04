@@ -15,6 +15,9 @@ plugin-malloc/lib/libjemalloc_pic.a: plugin-malloc.sh
 static.so: static.o migration.o config.o
 	$(CC) -o $@  $^ $(LD_FLAGS)
 
+static-fractional.so: static-fractional.o migration.o config.o plugin-malloc/lib/libjemalloc_pic.a
+	$(CC) -o $@  $^ $(LD_FLAGS)
+
 lru.so: lru.o migration.o config.o structures.o plugin-malloc/lib/libjemalloc_pic.a
 	$(CC) -o $@  $^ $(LD_FLAGS)
 
@@ -28,4 +31,4 @@ clean:
 	rm *.o *.so
 	rm -rf plugin-malloc
 
-all: plugin-malloc/lib/libjemalloc_pic.a static.so lru.so window.so log.so
+all: plugin-malloc/lib/libjemalloc_pic.a static.so static-fractional.so lru.so window.so log.so

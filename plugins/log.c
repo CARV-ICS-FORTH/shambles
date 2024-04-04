@@ -164,7 +164,7 @@ void logSample(void *addr, void *code){
 	samplePtr++;
 }
 
-void *sampler_thread_func(void *){
+void *sampler_thread_func(void * useless){
 	int fd;
 	void *buff[2];
 	fd = open("/sys/kernel/debug/sampler/samples", O_RDONLY);
