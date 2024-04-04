@@ -1,6 +1,6 @@
 # kernel
 
-The kernel needs to be compiled after applying the shambles.patch (or the experimental refactored.patch).
+The kernel needs to be compiled after applying the respective patch.
 
 # jemalloc
 
@@ -9,4 +9,4 @@ Alternatively, extras/shambles.eb can be used, in order to install with easybuil
 
 # plugins
 
-They can be simply compiled with gcc or clang.
+They can be built by running make in the plugins directory.
