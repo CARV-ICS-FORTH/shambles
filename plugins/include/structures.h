@@ -24,8 +24,10 @@ struct ShamblesRegion{
 
 void shamblesStructsInit(struct ShamblesPluginConfig *config);
 struct ShamblesChunk *getChunkInfo(void *addr);
+struct ShamblesChunk *getChunkInfoNU(void *addr);
 struct ShamblesRegion *getRegion(void *addr);
 struct ShamblesRegion *addRegion(void *addr, size_t size);
+struct ShamblesRegion *addRegionChunks(void *addr, size_t size, int nChuncks, size_t *chunkSizes);
 void deleteRegion(struct ShamblesRegion *region);
 
 #endif

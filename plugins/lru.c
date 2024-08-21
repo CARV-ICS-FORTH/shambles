@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <logger.h>
 
 struct ShamblesPluginConfig config;
 
@@ -135,6 +136,7 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 			plugin_free(nodes);
 		}
 	}
+	LOG_ALLOC(type, in, out, size);
 }
 
 void handleSample(void *addr){
@@ -145,6 +147,7 @@ void handleSample(void *addr){
 		node = (struct LRUlist *)(chunk->privData);
 		if(node->loc == FAST){
 			dq(&mru, node);
+			LOG_SAMPLE(addr, NULL, 3);
 		}else{
 			struct LRUlist *victim;
 			dq(&lru, node);
@@ -154,8 +157,11 @@ void handleSample(void *addr){
 			swap(&config, chunk, victim->chunk);
 			node->loc = FAST;
 			victim->loc = SLOW;
+			LOG_SAMPLE(addr, NULL, 5);
 		}
 		push(&mru, node);
+	}else{
+		LOG_SAMPLE(addr, NULL, 0);
 	}
 	pthread_mutex_unlock(&lruLock);
 }
@@ -179,6 +185,7 @@ int lruInit(){
 		return err;
 	}
 	shamblesStructsInit(&config);
+	INIT_LOGGER();
 	freeFastChunks = config.fastChunks;
 	mru = NULL;
 	lru = NULL;

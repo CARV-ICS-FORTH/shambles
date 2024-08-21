@@ -103,6 +103,20 @@ struct ShamblesChunk *getChunkInfo(void *addr){
 #endif /* P2CHSIZE */
 }
 
+struct ShamblesChunk *getChunkInfoNU(void *addr){
+	struct ShamblesRegion *region;
+	int i;
+	if((region = getRegion(addr)) == NULL){
+		return NULL;
+	}
+	for(i = 0; i < region->nChunks - 1; i++){
+		if(addr < region->chunks[i+1].start){
+			break;
+		}
+	}
+	return region->chunks + i;
+}
+
 /*
  * This is suboptimal af, but it will not be optimised anytime soon, we might as well consider it as not performance critical (or maybe not)
  */
@@ -133,6 +147,95 @@ struct ShamblesRegion *addRegion(void *addr, size_t size){
 	if(mod){
 		output->chunks[nChunks].size = mod;
 		output->chunks[nChunks].start = addr + (nChunks*CHUNK_SIZE);
+	}
+
+	if(addr0 & ((1LLU << REGION_SHIFT) - 1)){
+		nl = root + (addr0 & NON_LEAF_NODE_MASK_0 & ADDR_RELEVANT_BITS);
+		mask = NON_LEAF_NODE_MASK_0 >> NON_LEAF_SHIFT;
+		shift = NON_LEAF_SHIFT_0 - NON_LEAF_SHIFT;
+		for(int i = 0; i < NON_LEAF_NODES_DEPTH; i++){
+			if(nl->nln == NULL){
+				nl->nln = plugin_calloc(NON_LEAF_NODES_ARRAY_SIZE, sizeof(struct NonLeafNode));
+			}
+			nl->refcount++;
+			nl = nl->nln + ((addr0 & mask) >> shift);
+			shift -= NON_LEAF_SHIFT;
+			mask >>= NON_LEAF_SHIFT;
+		}
+		if(nl->regions == NULL){
+			nl->regions = plugin_calloc(LEAF_NODES_ARRAY_SIZE, sizeof(struct RegionNode));
+		}
+		nl->refcount++;
+		rn = nl->regions + ((addr0 & REGION_NODE_MASK) >> REGION_SHIFT);
+		rn->highAddr = addr;
+		rn->highReg = output;
+	}
+	addr0 &= ~((1LLU << REGION_SHIFT) - 1);
+	addr0 += 1LLU << REGION_SHIFT;
+	while(addr0 < (((uint64_t)end) & ~((1LLU << REGION_SHIFT) - 1))){
+		nl = root + (addr0 & NON_LEAF_NODE_MASK_0 & ADDR_RELEVANT_BITS);
+		mask = NON_LEAF_NODE_MASK_0 >> NON_LEAF_SHIFT;
+		shift = NON_LEAF_SHIFT_0 - NON_LEAF_SHIFT;
+		for(int i = 0; i < NON_LEAF_NODES_DEPTH; i++){
+			if(nl->nln == NULL){
+				nl->nln = plugin_calloc(NON_LEAF_NODES_ARRAY_SIZE, sizeof(struct NonLeafNode));
+			}
+			nl->refcount++;
+			nl = nl->nln + ((addr0 & mask) >> shift);
+			shift -= NON_LEAF_SHIFT;
+			mask >>= NON_LEAF_SHIFT;
+		}
+		if(nl->regions == NULL){
+			nl->regions = plugin_calloc(LEAF_NODES_ARRAY_SIZE, sizeof(struct RegionNode));
+		}
+		nl->refcount++;
+		rn = nl->regions + ((addr0 & REGION_NODE_MASK) >> REGION_SHIFT);
+		rn->highAddr = addr;
+		rn->highReg = output;
+		rn->lowAddr = end;
+		rn->lowReg = output;
+		addr0 += 1LLU << REGION_SHIFT;
+	}
+	if(addr0 != (uint64_t)end){
+		nl = root + (addr0 & NON_LEAF_NODE_MASK_0 & ADDR_RELEVANT_BITS);
+		mask = NON_LEAF_NODE_MASK_0 >> NON_LEAF_SHIFT;
+		shift = NON_LEAF_SHIFT_0 - NON_LEAF_SHIFT;
+		for(int i = 0; i < NON_LEAF_NODES_DEPTH; i++){
+			if(nl->nln == NULL){
+				nl->nln = plugin_calloc(NON_LEAF_NODES_ARRAY_SIZE, sizeof(struct NonLeafNode));
+			}
+			nl->refcount++;
+			nl = nl->nln + ((addr0 & mask) >> shift);
+			shift -= NON_LEAF_SHIFT;
+			mask >>= NON_LEAF_SHIFT;
+		}
+		if(nl->regions == NULL){
+			nl->regions = plugin_calloc(LEAF_NODES_ARRAY_SIZE, sizeof(struct RegionNode));
+		}
+		nl->refcount++;
+		rn = nl->regions + ((addr0 & REGION_NODE_MASK) >> REGION_SHIFT);
+		rn->lowAddr = end;
+		rn->lowReg = output;
+	}
+	return output;
+}
+
+struct ShamblesRegion *addRegionChunks(void *addr, size_t size, int nChunks, size_t *chunkSizes){
+	void *end = addr + size;
+	struct NonLeafNode *nl;
+	struct RegionNode *rn;
+	uint64_t mask, shift;
+	uint64_t addr0 = (uint64_t)addr;
+	struct ShamblesRegion *output;
+	output = plugin_malloc(sizeof(struct ShamblesRegion));
+	output->start = addr;
+	output->nChunks = nChunks;
+	output->chunks = plugin_malloc(output->nChunks*sizeof(struct ShamblesChunk));
+	output->chunks[0].size = chunkSizes[0];
+	output->chunks[0].start = addr;
+	for(int i = 1; i < nChunks; i++){
+		output->chunks[i].size = chunkSizes[i];
+		output->chunks[i].start = output->chunks[i-1].start + chunkSizes[i-1];
 	}
 
 	if(addr0 & ((1LLU << REGION_SHIFT) - 1)){

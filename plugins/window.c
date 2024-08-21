@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
+#include <logger.h>
 
 struct ShamblesPluginConfig config;
 
@@ -175,19 +176,27 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 		}
 		pthread_mutex_unlock(&winLock);
 	}
+	LOG_ALLOC(type, in, out, size);
 }
 
 void handleSample(void *addr){
 	struct ShamblesChunk *chunk;
 	struct List *node;
 	pthread_mutex_lock(&winLock);
+	uint16_t flags = 0;
 	if((chunk = getChunkInfo(addr)) != NULL){
+		flags = LOG_TRACKED;
+		node = (struct List *)(chunk->privData);
+		if(node->loc == FAST){
+			flags |= LOG_HIT;
+		}
 		if(samples[currentLoc]){
 			if(chunk == samples[currentLoc]){
 				//do nothing
 				currentLoc++;
 				currentLoc %= windowSize;
 				pthread_mutex_unlock(&winLock);
+				LOG_SAMPLE(addr, NULL, flags);
 				return;
 			}
 			//demote chunk currently in samples[currentLoc]
@@ -254,6 +263,7 @@ void handleSample(void *addr){
 
 			}else{
 				//migration
+				flags |= LOG_MIGRATION;
 				struct List *tmp;
 				swap(&config, slowList->chunk, samples[currentLoc]);
 				tmp = slowList;
@@ -336,6 +346,7 @@ void handleSample(void *addr){
 				tails[node->count + 1] = node;
 			}else{
 				//migration
+				flags |= LOG_MIGRATION1;
 				int i;
 				struct List *tmp;
 				swap(&config, chunk, fastList->prev->chunk);
@@ -369,6 +380,7 @@ void handleSample(void *addr){
 		currentLoc %= windowSize;
 	}
 	pthread_mutex_unlock(&winLock);
+	LOG_SAMPLE(addr, NULL, flags);
 }
 
 void *sampler_thread_func(void *unused){
@@ -391,6 +403,7 @@ int windowInit(){
 		return err;
 	}
 	shamblesStructsInit(&config);
+	INIT_LOGGER();
 	freeFastChunks = config.fastChunks;
 	fastList = NULL;
 	slowList = NULL;
@@ -420,6 +433,7 @@ void shambles_init(void (**reportAllocFunc)(AllocEventType, void *, void *, size
 	if(windowInit()){
 		return;
 	}
+	
 	*reportAllocFunc = &allocCallback;
 
 	pthread_create(&thread, NULL, &sampler_thread_func, NULL);
