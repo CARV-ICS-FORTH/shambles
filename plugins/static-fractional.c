@@ -164,7 +164,7 @@ void shambles_init(void (**reportAllocFunc)(AllocEventType, void *, void *, size
 	if(ShamblesPluginConfigInit(&config)){
 		abort();
 	}
-	if((env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL && (env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL){
+	if((env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL && (env = getenv("SHAMBLES_ALLOC_SLOW_FRACTIONS"))==NULL){
 		invert = 0;
 		len = 0;
 	}else{
