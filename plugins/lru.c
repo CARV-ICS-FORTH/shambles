@@ -113,7 +113,7 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 			struct LRUlist *nodes = (struct LRUlist *)region->privData;
 			pthread_mutex_lock(&lruLock);
 			for(i = 0; i < region->nChunks; i++){
-				if(nodes[i].loc = SLOW){
+				if(nodes[i].loc == SLOW){
 					dq(&lru, nodes + i);
 				}else{
 					dq(&mru, nodes + i);

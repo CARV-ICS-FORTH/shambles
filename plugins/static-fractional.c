@@ -17,6 +17,7 @@ static uint64_t *fractions;
 static struct ShamblesPluginConfig config;
 static pthread_mutex_t structLock = PTHREAD_MUTEX_INITIALIZER;
 static int current = 0, len;
+static int invert;
 
 static uint64_t fraction(char *str){
 	uint64_t out;
@@ -42,21 +43,38 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 			pthread_mutex_lock(&structLock);
 			if(loc >= len || (fractions[loc] == 0)){
 				region = addRegionChunks(out, size, 1, &size);
-				region->chunks->privData = (void *)(0);
-				bindSlow(&config, region->chunks);
+				if(invert){
+					region->chunks->privData = (void *)(1);
+					bindFast(&config, region->chunks);
+				}else{
+					region->chunks->privData = (void *)(0);
+					bindSlow(&config, region->chunks);
+				}
 			}else if((fractions[loc] >= (1 << FRACTION_SHIFT))){
 				region = addRegionChunks(out, size, 1, &size);
-				region->chunks->privData = (void *)(1);
-				bindFast(&config, region->chunks);
+				if(invert){
+					region->chunks->privData = (void *)(0);
+					bindSlow(&config, region->chunks);
+				}else{
+					region->chunks->privData = (void *)(1);
+					bindFast(&config, region->chunks);
+				}
 			}else{
 				size_t sizes[2];
 				sizes[0] = fastSize(size, fractions[loc]);
 				sizes[1] = size - sizes[0];
 				region = addRegionChunks(out, size, 2, sizes);
-				region->chunks->privData = (void *)(1);
-				region->chunks[1].privData = (void *)(0);
-				bindFast(&config, region->chunks);
-				bindSlow(&config, region->chunks + 1);
+				if(invert){
+					region->chunks->privData = (void *)(0);
+					region->chunks[1].privData = (void *)(1);
+					bindSlow(&config, region->chunks);
+					bindFast(&config, region->chunks + 1);
+				}else{
+					region->chunks->privData = (void *)(1);
+					region->chunks[1].privData = (void *)(0);
+					bindFast(&config, region->chunks);
+					bindSlow(&config, region->chunks + 1);
+				}
 			}
 			pthread_mutex_unlock(&structLock);
 		}
@@ -81,18 +99,34 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 		if(loc >= len || (fractions[loc] == 0)){
 			chunk.start = out;
 			chunk.size = size;
-			bindSlow(&config, &chunk);
+			if(invert){
+				bindFast(&config, &chunk);
+			}else{
+				bindSlow(&config, &chunk);
+			}
 		}else if((fractions[loc] >= (1 << FRACTION_SHIFT))){
 			chunk.start = out;
 			chunk.size = size;
-			bindFast(&config, &chunk);
+			if(invert){
+				bindSlow(&config, &chunk);
+			}else{
+				bindFast(&config, &chunk);
+			}
 		}else{
 			chunk.start = out;
 			chunk.size = fastSize(size, fractions[loc]);
-			bindFast(&config, &chunk);
+			if(invert){
+				bindSlow(&config, &chunk);
+			}else{
+				bindFast(&config, &chunk);
+			}
 			chunk.start = out + chunk.size;
 			chunk.size = size - chunk.size;
-			bindSlow(&config, &chunk);
+			if(invert){
+				bindFast(&config, &chunk);
+			}else{
+				bindSlow(&config, &chunk);
+			}
 		}
 	}
 }
@@ -130,9 +164,15 @@ void shambles_init(void (**reportAllocFunc)(AllocEventType, void *, void *, size
 	if(ShamblesPluginConfigInit(&config)){
 		abort();
 	}
-	if((env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL){
+	if((env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL && env = getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL){
+		invert = 0;
 		len = 0;
 	}else{
+		if(getenv("SHAMBLES_ALLOC_FAST_FRACTIONS"))==NULL){
+			invert = 1;
+		}else{
+			invert = 0;
+		}
 		char *next;
 		int i;
 		for(i = 0; env[i] != '\0'; i++){

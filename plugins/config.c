@@ -51,9 +51,6 @@ int ShamblesPluginConfigInit(struct ShamblesPluginConfig *config){
 					config->chunkSize = (size_t)(-1);
 				}else{
 					config->chunkSize /= config->fastChunks;
-					if(config->chunkSize < config->sizeThresshold){
-						config->chunkSize = config->sizeThresshold;
-					}
 				}
 			}
 		}
@@ -61,8 +58,6 @@ int ShamblesPluginConfigInit(struct ShamblesPluginConfig *config){
 		config->chunkSize = strtol(env, NULL, 0);
 		if(!config->chunkSize){
 			config->chunkSize = (size_t)(-1);
-		}else if(config->chunkSize < config->sizeThresshold){
-			config->chunkSize = config->sizeThresshold;
 		}
 	}
 	if((env = getenv("SHAMBLES_FAST_MEM_CHUNKS"))==NULL){

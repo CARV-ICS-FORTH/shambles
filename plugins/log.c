@@ -93,7 +93,7 @@ void logSampleInit(){
 	char fname[128];
 	sprintf(fname, "samples.%d.log", pid);
 	samplefd = open(fname, O_RDWR | O_TRUNC | O_CREAT, 0777);
-	if(allocfd < 0){
+	if(samplefd < 0){
 		perror("open failed: ");
 		abort();
 	}
