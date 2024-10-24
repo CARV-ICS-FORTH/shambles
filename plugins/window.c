@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
-#include <logger.h>
+#include <tracking.h>
 
 struct ShamblesPluginConfig config;
 
@@ -99,6 +99,7 @@ void enq(struct List **q, struct List *node){
 
 
 static void allocCallback(AllocEventType type, void *in, void *out, size_t size){
+	LOG_ALLOC(type, in, out, size);
 	if(type == ALLOC_EVENT_ALLOC){
 		if(size >= config.sizeThresshold){
 			struct ShamblesRegion *region;
@@ -118,14 +119,14 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 			while(freeFastChunks && i < region->nChunks){
 				nodes[i].loc = FAST;
 				enq(&fastList, nodes + i);
-				bindFast(&config, region->chunks + i);
+				bindFastAlloc(&config, region->chunks + i);
 				freeFastChunks--;
 				i++;
 			}
 			while(i < region->nChunks){
 				nodes[i].loc = SLOW;
 				enq(&slowList, nodes + i);
-				bindSlow(&config, region->chunks + i);
+				bindSlowAlloc(&config, region->chunks + i);
 				i++;
 			}
 			tails[0] = nodes + region->nChunks - 1;
@@ -176,7 +177,6 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 		}
 		pthread_mutex_unlock(&winLock);
 	}
-	LOG_ALLOC(type, in, out, size);
 }
 
 void handleSample(void *addr){
@@ -190,13 +190,13 @@ void handleSample(void *addr){
 		if(node->loc == FAST){
 			flags |= LOG_HIT;
 		}
+		LOG_SAMPLE(addr, NULL, flags);
 		if(samples[currentLoc]){
 			if(chunk == samples[currentLoc]){
 				//do nothing
 				currentLoc++;
 				currentLoc %= windowSize;
 				pthread_mutex_unlock(&winLock);
-				LOG_SAMPLE(addr, NULL, flags);
 				return;
 			}
 			//demote chunk currently in samples[currentLoc]
@@ -263,7 +263,6 @@ void handleSample(void *addr){
 
 			}else{
 				//migration
-				flags |= LOG_MIGRATION;
 				struct List *tmp;
 				swap(&config, slowList->chunk, samples[currentLoc]);
 				tmp = slowList;
@@ -346,7 +345,6 @@ void handleSample(void *addr){
 				tails[node->count + 1] = node;
 			}else{
 				//migration
-				flags |= LOG_MIGRATION1;
 				int i;
 				struct List *tmp;
 				swap(&config, chunk, fastList->prev->chunk);
@@ -378,9 +376,10 @@ void handleSample(void *addr){
 		}
 		currentLoc++;
 		currentLoc %= windowSize;
+	}else{
+		LOG_SAMPLE(addr, NULL, flags);
 	}
 	pthread_mutex_unlock(&winLock);
-	LOG_SAMPLE(addr, NULL, flags);
 }
 
 void *sampler_thread_func(void *unused){

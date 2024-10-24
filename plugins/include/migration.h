@@ -11,6 +11,8 @@
 void unbind(struct ShamblesRegion *region);
 void bindFast(struct ShamblesPluginConfig *config, struct ShamblesChunk *chunk);
 void bindSlow(struct ShamblesPluginConfig *config, struct ShamblesChunk *chunk);
+void bindFastAlloc(struct ShamblesPluginConfig *config, struct ShamblesChunk *chunk);
+void bindSlowAlloc(struct ShamblesPluginConfig *config, struct ShamblesChunk *chunk);
 void swap(struct ShamblesPluginConfig *config, struct ShamblesChunk *fastChunk, struct ShamblesChunk *slowChunk);
 
 #endif

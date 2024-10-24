@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <logger.h>
+#include <tracking.h>
 
 struct ShamblesPluginConfig config;
 
@@ -73,6 +73,7 @@ void enq(struct LRUlist **q, struct LRUlist *node){
 }
 
 static void allocCallback(AllocEventType type, void *in, void *out, size_t size){
+	LOG_ALLOC(type, in, out, size);
 	if(type == ALLOC_EVENT_ALLOC){
 		if(size >= config.sizeThresshold){
 			struct ShamblesRegion *region;
@@ -91,14 +92,14 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 			while(freeFastChunks && i < region->nChunks){
 				nodes[i].loc = FAST;
 				enq(&mru, nodes + i);
-				bindFast(&config, region->chunks + i);
+				bindFastAlloc(&config, region->chunks + i);
 				freeFastChunks--;
 				i++;
 			}
 			while(i < region->nChunks){
 				nodes[i].loc = SLOW;
 				enq(&lru, nodes + i);
-				bindSlow(&config, region->chunks + i);
+				bindSlowAlloc(&config, region->chunks + i);
 				i++;
 			}
 			pthread_mutex_unlock(&lruLock);
@@ -136,7 +137,6 @@ static void allocCallback(AllocEventType type, void *in, void *out, size_t size)
 			plugin_free(nodes);
 		}
 	}
-	LOG_ALLOC(type, in, out, size);
 }
 
 void handleSample(void *addr){
@@ -147,17 +147,17 @@ void handleSample(void *addr){
 		node = (struct LRUlist *)(chunk->privData);
 		if(node->loc == FAST){
 			dq(&mru, node);
-			LOG_SAMPLE(addr, NULL, 3);
+			LOG_SAMPLE(addr, NULL, LOG_TRACKED | LOG_HIT);
 		}else{
 			struct LRUlist *victim;
 			dq(&lru, node);
 			victim = mru->prev;
 			dq(&mru, victim);
 			push(&lru, victim);
+			LOG_SAMPLE(addr, NULL, LOG_TRACKED);
 			swap(&config, chunk, victim->chunk);
 			node->loc = FAST;
 			victim->loc = SLOW;
-			LOG_SAMPLE(addr, NULL, 5);
 		}
 		push(&mru, node);
 	}else{

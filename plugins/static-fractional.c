@@ -5,7 +5,7 @@
 #include <config.h>
 #include <shambles.h>
 #include <jemalloc.h>
-#include <logger.h>
+#include <tracking.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -35,6 +35,7 @@ static inline size_t fastSize(size_t size, uint64_t fract){
 #ifdef SHAMBLES_LOGGER_ENABLED
 static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 	int loc;
+	LOG_ALLOC(type, in, out, size);
 	if(type == ALLOC_EVENT_ALLOC){
 		if(size >= config.sizeThresshold){
 			struct ShamblesRegion *region;
@@ -45,19 +46,19 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 				region = addRegionChunks(out, size, 1, &size);
 				if(invert){
 					region->chunks->privData = (void *)(1);
-					bindFast(&config, region->chunks);
+					bindFastAlloc(&config, region->chunks);
 				}else{
 					region->chunks->privData = (void *)(0);
-					bindSlow(&config, region->chunks);
+					bindSlowAlloc(&config, region->chunks);
 				}
 			}else if((fractions[loc] >= (1 << FRACTION_SHIFT))){
 				region = addRegionChunks(out, size, 1, &size);
 				if(invert){
 					region->chunks->privData = (void *)(0);
-					bindSlow(&config, region->chunks);
+					bindSlowAlloc(&config, region->chunks);
 				}else{
 					region->chunks->privData = (void *)(1);
-					bindFast(&config, region->chunks);
+					bindFastAlloc(&config, region->chunks);
 				}
 			}else{
 				size_t sizes[2];
@@ -67,13 +68,13 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 				if(invert){
 					region->chunks->privData = (void *)(0);
 					region->chunks[1].privData = (void *)(1);
-					bindSlow(&config, region->chunks);
-					bindFast(&config, region->chunks + 1);
+					bindSlowAlloc(&config, region->chunks);
+					bindFastAlloc(&config, region->chunks + 1);
 				}else{
 					region->chunks->privData = (void *)(1);
 					region->chunks[1].privData = (void *)(0);
-					bindFast(&config, region->chunks);
-					bindSlow(&config, region->chunks + 1);
+					bindFastAlloc(&config, region->chunks);
+					bindSlowAlloc(&config, region->chunks + 1);
 				}
 			}
 			pthread_mutex_unlock(&structLock);
@@ -88,7 +89,6 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 		}
 		pthread_mutex_unlock(&structLock);
 	}
-	LOG_ALLOC(type, in, out, size);
 }
 #else
 static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
@@ -100,32 +100,32 @@ static void bindAlloc(AllocEventType type, void *in, void *out, size_t size){
 			chunk.start = out;
 			chunk.size = size;
 			if(invert){
-				bindFast(&config, &chunk);
+				bindFastAlloc(&config, &chunk);
 			}else{
-				bindSlow(&config, &chunk);
+				bindSlowAlloc(&config, &chunk);
 			}
 		}else if((fractions[loc] >= (1 << FRACTION_SHIFT))){
 			chunk.start = out;
 			chunk.size = size;
 			if(invert){
-				bindSlow(&config, &chunk);
+				bindSlowAlloc(&config, &chunk);
 			}else{
-				bindFast(&config, &chunk);
+				bindFastAlloc(&config, &chunk);
 			}
 		}else{
 			chunk.start = out;
 			chunk.size = fastSize(size, fractions[loc]);
 			if(invert){
-				bindSlow(&config, &chunk);
+				bindSlowAlloc(&config, &chunk);
 			}else{
-				bindFast(&config, &chunk);
+				bindFastAlloc(&config, &chunk);
 			}
 			chunk.start = out + chunk.size;
 			chunk.size = size - chunk.size;
 			if(invert){
-				bindFast(&config, &chunk);
+				bindFastAlloc(&config, &chunk);
 			}else{
-				bindSlow(&config, &chunk);
+				bindSlowAlloc(&config, &chunk);
 			}
 		}
 	}

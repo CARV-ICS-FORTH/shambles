@@ -8,7 +8,8 @@ typedef struct{
 	uint64_t reallocs;
 	uint64_t hits;
 	uint64_t misses;
-	uint64_t migrations;
+	uint64_t migrations[4];
+	uint64_t migrationBytes[4];
 	uint64_t small;
 }ShamblesCounters;
 

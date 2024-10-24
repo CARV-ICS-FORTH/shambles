@@ -2,36 +2,29 @@
 
 #define SHAMBLES_LOGGER_H
 
-#define LOG_TRACKED 1
-#define LOG_HIT 2
-#define LOG_MIGRATION 4
-#define LOG_MIGRATION1 8
+#include <tracking.h>
+#include <shambles.h>
+#include <stdint.h>
 
-#ifdef SHAMBLES_COUNTERS
-#define SHAMBLES_LOGGER_ENABLED
-#endif
+typedef struct{
+	AllocEventType type;
+	void *in, *out;
+	size_t size;
+	void *callsite[10];
+	struct timespec timestamp;
+}AllocEvent __attribute__ ((aligned (128)));
 
-#ifdef SHAMBLES_LOGGER_ENABLED
+typedef struct{
+	void *addr;
+	char code[16];
+	struct timespec timestamp;
+}Sample __attribute__ ((aligned (64)));
 
-void dumpMap();
-void loggerInit();
-void logSample(void *addr, void *code, uint16_t flags);
-void logAlloc(AllocEventType type, void *in, void *out, size_t size);
-
-#define DUMP_MAP() dumpMap()
-#define INIT_LOGGER() loggerInit()
-
-#define LOG_SAMPLE(addr, code, flags) logSample(addr, code, flags)
-#define LOG_ALLOC(type, in, out, size) logAlloc(type, in, out, size)
-#else
-
-#define DUMP_MAP()
-#define INIT_LOGGER()
-
-#define LOG_SAMPLE(addr, code, flags)
-#define LOG_ALLOC(type, in, out, size)
-
-
-#endif
+typedef struct{
+	void *addr;
+	Direction dir;
+	size_t size;
+	struct timespec timestamp;
+}MigrationEvent __attribute__ ((aligned (64)));
 
 #endif

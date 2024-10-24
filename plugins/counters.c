@@ -1,4 +1,4 @@
-#include "include/logger.h"
+#include "include/tracking.h"
 #include "include/counters.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -42,12 +42,6 @@ void logSample(void *addr, void *code, uint16_t flags){
 	}else{
 		__atomic_fetch_add(&shamblesCounters->small, 1, __ATOMIC_RELAXED);
 	}
-	if(flags & LOG_MIGRATION){
-		__atomic_fetch_add(&shamblesCounters->migrations, 1, __ATOMIC_RELAXED);
-	}
-	if(flags & LOG_MIGRATION1){
-		__atomic_fetch_add(&shamblesCounters->migrations, 1, __ATOMIC_RELAXED);
-	}
 }
 
 void logAlloc(AllocEventType type, void *in, void *out, size_t size){
@@ -58,4 +52,9 @@ void logAlloc(AllocEventType type, void *in, void *out, size_t size){
 	}else{
 		__atomic_fetch_add(&shamblesCounters->reallocs, 1, __ATOMIC_RELAXED);
 	}
+}
+
+void logMigration(Direction dir, void *addr, size_t size){
+	__atomic_fetch_add(&shamblesCounters->migrations[dir], 1, __ATOMIC_RELAXED);
+	__atomic_fetch_add(&shamblesCounters->migrationBytes[dir], 1, __ATOMIC_RELAXED);
 }

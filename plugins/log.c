@@ -159,7 +159,9 @@ void logSample(void *addr, void *code){
 	sampleCnt++;
 	*sampleCntFile = sampleCnt;
 	samplePtr->addr = addr;
-	memcpy(samplePtr->code, code, 15);
+	if(code){
+		memcpy(samplePtr->code, code, 15);
+	}
 	clock_gettime(CLOCK_MONOTONIC, &samplePtr->timestamp);
 	samplePtr++;
 }
