@@ -128,7 +128,7 @@ void loggerInit(){
 void logSample(void *addr, void *code, uint16_t flags){
 	if((((uint64_t)samplePtr) & 0x1fffff) == 0){
 		if(sampleOffset){
-			munmap(samplePtr - 0x200000, 0x200000);
+			munmap((void *)samplePtr - 0x200000, 0x200000);
 		}
 		sampleOffset += 0x200000;
 		if(posix_fallocate(samplefd, sampleOffset, 0x200000)){
@@ -157,7 +157,7 @@ void logAlloc(AllocEventType type, void *in, void *out, size_t size){
 	pthread_mutex_lock(&logLock);
 	if((((uint64_t)allocEventPtr) & 0x1fffff) == 0){
 		if(allocOffset){
-			munmap(allocEventPtr - 0x200000, 0x200000);
+			munmap((void *)allocEventPtr - 0x200000, 0x200000);
 		}
 		allocOffset += 0x200000;
 		if(posix_fallocate(allocfd, allocOffset, 0x200000)){
