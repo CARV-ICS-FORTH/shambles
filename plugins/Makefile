@@ -45,11 +45,9 @@ window-counters.so: window.log.o counters.o migration.log.o config.o structures.
 window-logger.so: window.log.o logger.o migration.log.o config.o structures.o plugin-malloc/lib/libjemalloc_pic.a
 	$(CC) -o $@  $^ $(LD_FLAGS)
 
-log.so: log.o
-	$(CC) -o $@  $^ $(LD_FLAGS)
 
 clean:
 	rm *.o *.so
 	rm -rf plugin-malloc
 
-all: plugin-malloc/lib/libjemalloc_pic.a static.so static-fractional.so lru.so window.so log.so window-counters.so lru-counters.so static-counters.so window-logger.so lru-logger.so static-logger.so
+all: plugin-malloc/lib/libjemalloc_pic.a static.so static-fractional.so lru.so window.so window-counters.so lru-counters.so static-counters.so window-logger.so lru-logger.so static-logger.so
