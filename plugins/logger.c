@@ -190,7 +190,7 @@ void logMigration(Direction dir, void *addr, size_t size){
 	pthread_mutex_lock(&migLock);
 	if((((uint64_t)migPtr) & 0x1fffff) == 0){
 		if(migOffset){
-			munmap(migPtr - 0x200000, 0x200000);
+			munmap((void *)migPtr - 0x200000, 0x200000);
 		}
 		migOffset += 0x200000;
 		if(posix_fallocate(migfd, migOffset, 0x200000)){
