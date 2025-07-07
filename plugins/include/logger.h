@@ -12,19 +12,19 @@ typedef struct{
 	size_t size;
 	void *callsite[10];
 	struct timespec timestamp;
-}AllocEvent __attribute__ ((aligned (128)));
+} __attribute__ ((aligned (128))) AllocEvent;
 
 typedef struct{
 	void *addr;
 	char code[16];
 	struct timespec timestamp;
-}Sample __attribute__ ((aligned (64)));
+} __attribute__ ((aligned (64))) Sample;
 
 typedef struct{
 	void *addr;
 	Direction dir;
 	size_t size;
 	struct timespec timestamp;
-}MigrationEvent __attribute__ ((aligned (64)));
+} __attribute__ ((aligned (64))) MigrationEvent;
 
 #endif
