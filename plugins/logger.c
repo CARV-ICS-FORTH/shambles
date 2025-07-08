@@ -64,7 +64,7 @@ static void logAllocInit(){
 		perror("fallocate failed wtf1: ");
 		abort();
 	}
-	allocEventPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED, allocfd, allocOffset);
+	allocEventPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_HUGETLB | MAP_HUGE_2MB, allocfd, allocOffset);
 	if(allocEventPtr == MAP_FAILED){
 		perror("mmap failed: ");
 		abort();
@@ -86,7 +86,7 @@ static void logSampleInit(){
 		perror("fallocate 0 failed: ");
 		abort();
 	}
-	samplePtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, samplefd, 0);
+	samplePtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_HUGETLB | MAP_HUGE_2MB, samplefd, 0);
 	if(samplePtr == MAP_FAILED){
 		perror("mmap 0 failed: ");
 		abort();
@@ -108,7 +108,7 @@ static void logMigInit(){
 		perror("fallocate 0 failed: ");
 		abort();
 	}
-	migPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, migfd, 0);
+	migPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_HUGETLB | MAP_HUGE_2MB, migfd, 0);
 	if(migPtr == MAP_FAILED){
 		perror("mmap 0 failed: ");
 		abort();
@@ -135,7 +135,7 @@ void logSample(void *addr, void *code, uint16_t flags){
 			perror("fallocate failed: ");
 			abort();
 		}
-		samplePtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, samplefd, sampleOffset);
+		samplePtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_HUGETLB | MAP_HUGE_2MB, samplefd, sampleOffset);
 		if(samplePtr == MAP_FAILED){
 			perror("mmap failed: ");
 			abort();
@@ -164,7 +164,7 @@ void logAlloc(AllocEventType type, void *in, void *out, size_t size){
 			perror("fallocate failed");
 			abort();
 		}
-		allocEventPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED, allocfd, allocOffset);
+		allocEventPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_HUGETLB | MAP_HUGE_2MB, allocfd, allocOffset);
 		if(allocEventPtr == MAP_FAILED){
 			perror("mmap failed: ");
 			abort();
@@ -197,7 +197,7 @@ void logMigration(Direction dir, void *addr, size_t size){
 			perror("fallocate failed");
 			abort();
 		}
-		migPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED, migfd, migOffset);
+		migPtr = mmap(NULL, 0x200000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_HUGETLB | MAP_HUGE_2MB, migfd, migOffset);
 		if(migPtr == MAP_FAILED){
 			perror("mmap failed: ");
 			abort();
